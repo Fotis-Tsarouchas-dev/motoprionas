@@ -58,6 +58,16 @@ async function listingHasImage(id: string) {
   return !!r.length;
 }
 
+async function accessoryHasImage(id: string) {
+  const r = await sql`
+    SELECT 1
+    FROM accessory_images
+    WHERE accessory_id=${id}
+    LIMIT 1
+  `;
+  return !!r.length;
+}
+
 async function cleanup(keys: string[]) {
   await Promise.allSettled(keys.map((k) => mediaStore().delete(k)));
 }
@@ -699,6 +709,7 @@ export default async function handler(req: Request, _context: Context) {
 
         const d = parsed.data;
         const slug = await uniqueSlug(d.title, 'accessories');
+        const initialStatus = d.status === 'active' ? 'hidden' : d.status;
 
         const r = await sql`
           INSERT INTO accessories(
@@ -714,16 +725,47 @@ export default async function handler(req: Request, _context: Context) {
             ${d.title},
             ${d.price_eur},
             ${d.description},
-            ${d.status},
-            ${d.status === 'active' ? new Date() : null}
+            ${initialStatus},
+            ${null}
           )
           RETURNING *
         `;
 
-        return json(r[0], 201);
+        return json({ ...r[0], requested_status: d.status }, 201);
       }
 
       const id = p[1];
+
+      if (!id) {
+        return new Response('Not found', { status: 404 });
+      }
+
+      if (p.length === 2 && req.method === 'GET') {
+        const rows = await sql`
+          SELECT *
+          FROM accessories
+          WHERE id=${id}
+          LIMIT 1
+        `;
+
+        if (!rows[0]) {
+          return new Response('Not found', { status: 404 });
+        }
+
+        const images = await sql`
+          SELECT
+            id,
+            display_blob_key,
+            thumbnail_blob_key,
+            sort_order,
+            is_cover
+          FROM accessory_images
+          WHERE accessory_id=${id}
+          ORDER BY sort_order
+        `;
+
+        return json({ ...rows[0], images });
+      }
 
       if (
         p[2] === 'images' &&
@@ -731,6 +773,116 @@ export default async function handler(req: Request, _context: Context) {
         req.method === 'POST'
       ) {
         return uploadAccessoryImage(id, req);
+      }
+
+      if (
+        p[2] === 'images' &&
+        p[3] === 'order' &&
+        req.method === 'PATCH'
+      ) {
+        const body = (await req.json()) as {
+          ids?: string[];
+          coverId?: string;
+        };
+
+        if (!Array.isArray(body.ids)) {
+          return json({ error: 'Μη έγκυρη σειρά.' }, 400);
+        }
+
+        await sql.begin(async (tx) => {
+          for (let i = 0; i < body.ids!.length; i++) {
+            await tx`
+              UPDATE accessory_images
+              SET
+                sort_order=${i},
+                is_cover=${body.ids![i] === body.coverId}
+              WHERE id=${body.ids![i]}
+                AND accessory_id=${id}
+            `;
+          }
+
+          if (!body.coverId && body.ids!.length) {
+            await tx`
+              UPDATE accessory_images
+              SET is_cover=TRUE
+              WHERE id=${body.ids![0]}
+                AND accessory_id=${id}
+            `;
+          }
+        });
+
+        return json({ ok: true });
+      }
+
+      if (
+        p[2] === 'images' &&
+        p[3] &&
+        req.method === 'DELETE'
+      ) {
+        const imageId = p[3];
+        const rows = await sql`
+          SELECT *
+          FROM accessory_images
+          WHERE id=${imageId}
+            AND accessory_id=${id}
+        `;
+
+        if (!rows.length) {
+          return new Response('Not found', { status: 404 });
+        }
+
+        const row = rows[0];
+        const total = await sql`
+          SELECT COUNT(*)::int n
+          FROM accessory_images
+          WHERE accessory_id=${id}
+        `;
+        const item = await sql`
+          SELECT status
+          FROM accessories
+          WHERE id=${id}
+        `;
+
+        if (
+          total[0].n <= 1 &&
+          item[0]?.status === 'active'
+        ) {
+          return json(
+            { error: 'Ένα ενεργό είδος πρέπει να έχει τουλάχιστον μία φωτογραφία.' },
+            400,
+          );
+        }
+
+        await sql`
+          DELETE FROM accessory_images
+          WHERE id=${imageId}
+        `;
+
+        await cleanup([
+          row.original_blob_key,
+          row.display_blob_key,
+          row.thumbnail_blob_key,
+        ]);
+
+        if (row.is_cover) {
+          const next = await sql`
+            SELECT id
+            FROM accessory_images
+            WHERE accessory_id=${id}
+            ORDER BY sort_order
+            LIMIT 1
+          `;
+
+          if (next[0]) {
+            await sql`
+              UPDATE accessory_images
+              SET is_cover=TRUE
+              WHERE id=${next[0].id}
+            `;
+          }
+        }
+
+        return json({ ok: true });
       }
 
       if (p.length === 2 && req.method === 'PATCH') {
@@ -744,6 +896,16 @@ export default async function handler(req: Request, _context: Context) {
         }
 
         const d = parsed.data;
+
+        if (
+          d.status === 'active' &&
+          !(await accessoryHasImage(id))
+        ) {
+          return json(
+            { error: 'Προσθέστε τουλάχιστον μία φωτογραφία.' },
+            400,
+          );
+        }
 
         const r = await sql`
           UPDATE accessories
@@ -763,7 +925,9 @@ export default async function handler(req: Request, _context: Context) {
           RETURNING *
         `;
 
-        return json(r[0]);
+        return r[0]
+          ? json(r[0])
+          : new Response('Not found', { status: 404 });
       }
 
       if (p.length === 2 && req.method === 'DELETE') {

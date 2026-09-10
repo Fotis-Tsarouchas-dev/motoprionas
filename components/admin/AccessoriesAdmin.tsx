@@ -9,6 +9,7 @@ type AccessoryStatus = 'active' | 'sold' | 'hidden';
 
 type Accessory = {
   id: string;
+  slug: string;
   title: string;
   price_eur: number | null;
   description: string;
@@ -35,9 +36,7 @@ export default function AccessoriesAdmin() {
     setError('');
 
     try {
-      const response = await fetch('/api/admin/accessories', {
-        cache: 'no-store',
-      });
+      const response = await fetch('/api/admin/accessories', { cache: 'no-store' });
 
       if (response.status === 401 || response.status === 403) {
         router.replace('/admin/login');
@@ -45,17 +44,13 @@ export default function AccessoriesAdmin() {
       }
 
       if (!response.ok) {
-        throw new Error(
-          'Τα αξεσουάρ και ανταλλακτικά δεν μπόρεσαν να φορτωθούν.',
-        );
+        throw new Error('Τα αξεσουάρ και ανταλλακτικά δεν μπόρεσαν να φορτωθούν.');
       }
 
       setItems(await response.json());
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Παρουσιάστηκε κάποιο πρόβλημα.',
+        err instanceof Error ? err.message : 'Παρουσιάστηκε κάποιο πρόβλημα.',
       );
     } finally {
       setLoading(false);
@@ -66,41 +61,31 @@ export default function AccessoriesAdmin() {
     void load();
   }, []);
 
-  async function setStatus(
-    item: Accessory,
-    status: AccessoryStatus,
-  ) {
+  async function setStatus(item: Accessory, status: AccessoryStatus) {
     setBusyId(item.id);
     setError('');
 
     try {
-      const response = await fetch(
-        `/api/admin/accessories/${item.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            title: item.title,
-            price_eur: item.price_eur,
-            description: item.description,
-            status,
-          }),
-        },
-      );
+      const response = await fetch(`/api/admin/accessories/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          price_eur: item.price_eur,
+          description: item.description,
+          status,
+        }),
+      });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(
-          data.error || 'Η αλλαγή κατάστασης απέτυχε.',
-        );
+        throw new Error(data.error || 'Η αλλαγή κατάστασης απέτυχε.');
       }
 
       await load();
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Παρουσιάστηκε κάποιο πρόβλημα.',
+        err instanceof Error ? err.message : 'Παρουσιάστηκε κάποιο πρόβλημα.',
       );
     } finally {
       setBusyId(null);
@@ -114,23 +99,15 @@ export default function AccessoriesAdmin() {
     setError('');
 
     try {
-      const response = await fetch(
-        `/api/admin/accessories/${id}`,
-        {
-          method: 'DELETE',
-        },
-      );
+      const response = await fetch(`/api/admin/accessories/${id}`, {
+        method: 'DELETE',
+      });
 
-      if (!response.ok) {
-        throw new Error('Η διαγραφή απέτυχε.');
-      }
-
+      if (!response.ok) throw new Error('Η διαγραφή απέτυχε.');
       await load();
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Παρουσιάστηκε κάποιο πρόβλημα.',
+        err instanceof Error ? err.message : 'Παρουσιάστηκε κάποιο πρόβλημα.',
       );
     } finally {
       setBusyId(null);
@@ -142,20 +119,13 @@ export default function AccessoriesAdmin() {
       <div className="admin-toolbar">
         <div>
           <h1>Αξεσουάρ & Ανταλλακτικά</h1>
-          <p className="muted">
-            Ξεχωριστή διαχείριση ειδών από τις αγγελίες
-            μοτοσυκλετών.
-          </p>
+          <p className="muted">Ξεχωριστή διαχείριση ειδών από τις αγγελίες μοτοσυκλετών.</p>
         </div>
 
         <div className="admin-toolbar-actions">
-          <Link
-            className="button"
-            href="/admin/axesouar-antallaktika/neo"
-          >
+          <Link className="button" href="/admin/axesouar-antallaktika/neo">
             + Νέο είδος
           </Link>
-
           <Link className="button secondary" href="/admin">
             Πίνακας ελέγχου
           </Link>
@@ -176,18 +146,10 @@ export default function AccessoriesAdmin() {
             const busy = busyId === item.id;
 
             return (
-              <article
-                className="admin-listing-card"
-                key={item.id}
-              >
+              <article className="admin-listing-card" key={item.id}>
                 <div className="admin-listing-thumb">
                   {item.cover ? (
-                    <img
-                      src={`/media/${encodeURIComponent(
-                        item.cover,
-                      )}`}
-                      alt=""
-                    />
+                    <img src={`/media/${encodeURIComponent(item.cover)}`} alt="" />
                   ) : (
                     <span>Χωρίς φωτογραφία</span>
                   )}
@@ -196,10 +158,7 @@ export default function AccessoriesAdmin() {
                 <div className="admin-listing-info">
                   <div className="admin-listing-title-row">
                     <strong>{item.title}</strong>
-
-                    <span
-                      className={`status-badge status-${item.status}`}
-                    >
+                    <span className={`status-badge status-${item.status}`}>
                       {statusLabel(item.status)}
                     </span>
                   </div>
@@ -207,24 +166,34 @@ export default function AccessoriesAdmin() {
                   <div className="admin-listing-meta">
                     <span>{formatPrice(item.price_eur)}</span>
                     {item.created_at && (
-                      <span>
-                        {new Date(
-                          item.created_at,
-                        ).toLocaleDateString('el-GR')}
-                      </span>
+                      <span>{new Date(item.created_at).toLocaleDateString('el-GR')}</span>
                     )}
                   </div>
                 </div>
 
                 <div className="admin-actions">
+                  {item.status === 'active' && (
+                    <Link
+                      className="button secondary"
+                      href={`/axesouar-antallaktika/${item.slug}`}
+                    >
+                      Προβολή
+                    </Link>
+                  )}
+
+                  <Link
+                    className="button secondary"
+                    href={`/admin/axesouar-antallaktika/${item.id}/epexergasia`}
+                  >
+                    Επεξεργασία
+                  </Link>
+
                   {item.status === 'active' ? (
                     <button
                       type="button"
                       className="button secondary"
                       disabled={busy}
-                      onClick={() =>
-                        setStatus(item, 'hidden')
-                      }
+                      onClick={() => setStatus(item, 'hidden')}
                     >
                       Απόκρυψη
                     </button>
@@ -233,9 +202,7 @@ export default function AccessoriesAdmin() {
                       type="button"
                       className="button secondary"
                       disabled={busy}
-                      onClick={() =>
-                        setStatus(item, 'active')
-                      }
+                      onClick={() => setStatus(item, 'active')}
                     >
                       Ενεργοποίηση
                     </button>
@@ -268,10 +235,7 @@ export default function AccessoriesAdmin() {
       ) : (
         <div className="content-card">
           <p>Δεν υπάρχουν αξεσουάρ ή ανταλλακτικά ακόμη.</p>
-          <Link
-            className="button"
-            href="/admin/axesouar-antallaktika/neo"
-          >
+          <Link className="button" href="/admin/axesouar-antallaktika/neo">
             Δημιουργία πρώτου είδους
           </Link>
         </div>
