@@ -5,32 +5,27 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { formatPrice } from '@/lib/formatting';
 
-type ListingStatus = 'active' | 'sold' | 'hidden';
+type AccessoryStatus = 'active' | 'sold' | 'hidden';
 
-type Listing = {
+type Accessory = {
   id: string;
-  slug: string;
   title: string;
   price_eur: number | null;
-  registration_year: number;
-  kilometers: number;
-  engine_cc: number;
-  fuel: string | null;
   description: string;
-  status: ListingStatus;
+  status: AccessoryStatus;
   created_at: string;
   cover?: string;
 };
 
-function statusLabel(status: ListingStatus) {
-  if (status === 'active') return 'Ενεργή';
+function statusLabel(status: AccessoryStatus) {
+  if (status === 'active') return 'Ενεργό';
   if (status === 'sold') return 'Πουλήθηκε';
-  return 'Κρυφή';
+  return 'Κρυφό';
 }
 
-export default function AdminDashboard() {
+export default function AccessoriesAdmin() {
   const router = useRouter();
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [items, setItems] = useState<Accessory[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -40,7 +35,7 @@ export default function AdminDashboard() {
     setError('');
 
     try {
-      const response = await fetch('/api/admin/listings', {
+      const response = await fetch('/api/admin/accessories', {
         cache: 'no-store',
       });
 
@@ -50,10 +45,12 @@ export default function AdminDashboard() {
       }
 
       if (!response.ok) {
-        throw new Error('Οι αγγελίες δεν μπόρεσαν να φορτωθούν.');
+        throw new Error(
+          'Τα αξεσουάρ και ανταλλακτικά δεν μπόρεσαν να φορτωθούν.',
+        );
       }
 
-      setListings(await response.json());
+      setItems(await response.json());
     } catch (err) {
       setError(
         err instanceof Error
@@ -69,60 +66,23 @@ export default function AdminDashboard() {
     void load();
   }, []);
 
-  async function remove(id: string) {
-    if (
-      !window.confirm(
-        'Διαγραφή αγγελίας;\nΗ ενέργεια αυτή δεν μπορεί να αναιρεθεί.',
-      )
-    ) {
-      return;
-    }
-
-    setBusyId(id);
-    setError('');
-
-    try {
-      const response = await fetch(`/api/admin/listings/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Η διαγραφή απέτυχε.');
-      }
-
-      await load();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Παρουσιάστηκε κάποιο πρόβλημα.',
-      );
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function setStatus(
-    listing: Listing,
-    status: ListingStatus,
+    item: Accessory,
+    status: AccessoryStatus,
   ) {
-    setBusyId(listing.id);
+    setBusyId(item.id);
     setError('');
 
     try {
       const response = await fetch(
-        `/api/admin/listings/${listing.id}`,
+        `/api/admin/accessories/${item.id}`,
         {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            title: listing.title,
-            price_eur: listing.price_eur,
-            registration_year: listing.registration_year,
-            kilometers: listing.kilometers,
-            engine_cc: listing.engine_cc,
-            fuel: listing.fuel,
-            description: listing.description,
+            title: item.title,
+            price_eur: item.price_eur,
+            description: item.description,
             status,
           }),
         },
@@ -147,45 +107,58 @@ export default function AdminDashboard() {
     }
   }
 
-  async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.replace('/admin/login');
-    router.refresh();
+  async function remove(id: string) {
+    if (!window.confirm('Οριστική διαγραφή είδους;')) return;
+
+    setBusyId(id);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/admin/accessories/${id}`,
+        {
+          method: 'DELETE',
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error('Η διαγραφή απέτυχε.');
+      }
+
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Παρουσιάστηκε κάποιο πρόβλημα.',
+      );
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
     <main className="admin-shell">
       <div className="admin-toolbar">
         <div>
-          <h1>Διαχείριση Αγγελιών</h1>
+          <h1>Αξεσουάρ & Ανταλλακτικά</h1>
           <p className="muted">
-            Διαχειριστείτε τις αγγελίες μοτοσυκλετών.
+            Ξεχωριστή διαχείριση ειδών από τις αγγελίες
+            μοτοσυκλετών.
           </p>
         </div>
 
         <div className="admin-toolbar-actions">
-          <Link className="button" href="/admin/aggelies/nea">
-            + Νέα Αγγελία
-          </Link>
-
           <Link
-            className="button secondary"
-            href="/admin/axesouar-antallaktika"
+            className="button"
+            href="/admin/axesouar-antallaktika/neo"
           >
-            Αξεσουάρ & Ανταλλακτικά
+            + Νέο είδος
           </Link>
 
-          <Link className="button secondary" href="/">
-            Προβολή site
+          <Link className="button secondary" href="/admin">
+            Πίνακας ελέγχου
           </Link>
-
-          <button
-            type="button"
-            className="button secondary"
-            onClick={logout}
-          >
-            Αποσύνδεση
-          </button>
         </div>
       </div>
 
@@ -197,21 +170,21 @@ export default function AdminDashboard() {
 
       {loading ? (
         <p>Φόρτωση…</p>
-      ) : listings.length ? (
+      ) : items.length ? (
         <div className="admin-list">
-          {listings.map((listing) => {
-            const busy = busyId === listing.id;
+          {items.map((item) => {
+            const busy = busyId === item.id;
 
             return (
               <article
                 className="admin-listing-card"
-                key={listing.id}
+                key={item.id}
               >
                 <div className="admin-listing-thumb">
-                  {listing.cover ? (
+                  {item.cover ? (
                     <img
                       src={`/media/${encodeURIComponent(
-                        listing.cover,
+                        item.cover,
                       )}`}
                       alt=""
                     />
@@ -222,50 +195,35 @@ export default function AdminDashboard() {
 
                 <div className="admin-listing-info">
                   <div className="admin-listing-title-row">
-                    <strong>{listing.title}</strong>
+                    <strong>{item.title}</strong>
 
                     <span
-                      className={`status-badge status-${listing.status}`}
+                      className={`status-badge status-${item.status}`}
                     >
-                      {statusLabel(listing.status)}
+                      {statusLabel(item.status)}
                     </span>
                   </div>
 
                   <div className="admin-listing-meta">
-                    <span>{formatPrice(listing.price_eur)}</span>
-                    <span>{listing.registration_year}</span>
-                    <span>
-                      {new Date(
-                        listing.created_at,
-                      ).toLocaleDateString('el-GR')}
-                    </span>
+                    <span>{formatPrice(item.price_eur)}</span>
+                    {item.created_at && (
+                      <span>
+                        {new Date(
+                          item.created_at,
+                        ).toLocaleDateString('el-GR')}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="admin-actions">
-                  {listing.status === 'active' && (
-                    <Link
-                      className="button secondary"
-                      href={`/aggelies/${listing.slug}`}
-                    >
-                      Προβολή
-                    </Link>
-                  )}
-
-                  <Link
-                    className="button secondary"
-                    href={`/admin/aggelies/${listing.id}/epexergasia`}
-                  >
-                    Επεξεργασία
-                  </Link>
-
-                  {listing.status === 'active' ? (
+                  {item.status === 'active' ? (
                     <button
                       type="button"
                       className="button secondary"
                       disabled={busy}
                       onClick={() =>
-                        setStatus(listing, 'hidden')
+                        setStatus(item, 'hidden')
                       }
                     >
                       Απόκρυψη
@@ -276,21 +234,19 @@ export default function AdminDashboard() {
                       className="button secondary"
                       disabled={busy}
                       onClick={() =>
-                        setStatus(listing, 'active')
+                        setStatus(item, 'active')
                       }
                     >
                       Ενεργοποίηση
                     </button>
                   )}
 
-                  {listing.status !== 'sold' && (
+                  {item.status !== 'sold' && (
                     <button
                       type="button"
                       className="button secondary"
                       disabled={busy}
-                      onClick={() =>
-                        setStatus(listing, 'sold')
-                      }
+                      onClick={() => setStatus(item, 'sold')}
                     >
                       Πουλήθηκε
                     </button>
@@ -300,7 +256,7 @@ export default function AdminDashboard() {
                     type="button"
                     className="button danger"
                     disabled={busy}
-                    onClick={() => remove(listing.id)}
+                    onClick={() => remove(item.id)}
                   >
                     Διαγραφή
                   </button>
@@ -311,9 +267,12 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <div className="content-card">
-          <p>Δεν υπάρχουν αγγελίες ακόμη.</p>
-          <Link className="button" href="/admin/aggelies/nea">
-            Δημιουργία πρώτης αγγελίας
+          <p>Δεν υπάρχουν αξεσουάρ ή ανταλλακτικά ακόμη.</p>
+          <Link
+            className="button"
+            href="/admin/axesouar-antallaktika/neo"
+          >
+            Δημιουργία πρώτου είδους
           </Link>
         </div>
       )}
