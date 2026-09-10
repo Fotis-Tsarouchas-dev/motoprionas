@@ -1,0 +1,2 @@
+import { siteConfig } from '@/lib/config/site';
+export default function Footer(){return <footer className="footer"><div className="container footer-inner"><div><strong>Moto Prionas</strong><div>{siteConfig.address}, {siteConfig.city}, {siteConfig.postcode}</div></div><div><a href={`tel:${siteConfig.phoneE164}`}>{siteConfig.phoneDisplay}</a> · <a href={siteConfig.instagram} target="_blank" rel="noreferrer">Instagram</a></div></div></footer>}

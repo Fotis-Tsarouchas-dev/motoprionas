@@ -1,0 +1,3 @@
+import Image from 'next/image';
+import Link from 'next/link';
+export default function Header(){return <header className="header"><div className="container nav"><Link className="brand" href="/"><Image src="/motoprionas-logo.png" width={560} height={340} alt="Moto Prionas" priority/></Link><nav className="menu" aria-label="Κύρια πλοήγηση"><Link href="/">ΑΡΧΙΚΗ</Link><Link href="/axesouar-antallaktika">ΑΞΕΣΟΥΑΡ - ΑΝΤΑΛΛΑΚΤΙΚΑ</Link><Link href="/epikoinonia">ΕΠΙΚΟΙΝΩΝΙΑ</Link></nav><details className="mobile-menu"><summary aria-label="Άνοιγμα μενού">☰</summary><div><Link href="/">ΑΡΧΙΚΗ</Link><Link href="/axesouar-antallaktika">ΑΞΕΣΟΥΑΡ - ΑΝΤΑΛΛΑΚΤΙΚΑ</Link><Link href="/epikoinonia">ΕΠΙΚΟΙΝΩΝΙΑ</Link></div></details></div></header>}

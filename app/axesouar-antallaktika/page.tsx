@@ -1,0 +1,4 @@
+import { getPublicAccessories } from '@/lib/db/accessories';
+import { formatPrice } from '@/lib/formatting';
+export const metadata={title:'Αξεσουάρ - Ανταλλακτικά'};export const dynamic='force-dynamic';
+export default async function Accessories(){const items=await getPublicAccessories();return <main className="page"><div className="container"><h1>ΑΞΕΣΟΥΑΡ - ΑΝΤΑΛΛΑΚΤΙΚΑ</h1><p className="muted">Διαθέσιμα αξεσουάρ και ανταλλακτικά. Για πληροφορίες καλέστε μας.</p><div className="grid">{items.length?items.map(x=><article className="card" key={x.id}>{x.cover&&<div className="card-media"><img loading="lazy" src={`/media/${encodeURIComponent(x.cover)}`} alt={x.title}/></div>}<div className="card-body"><h2>{x.title}</h2><span className="price">{formatPrice(x.price_eur)}</span><p className="muted">{x.description}</p></div></article>):<div className="content-card">Δεν υπάρχουν διαθέσιμα είδη αυτή τη στιγμή.</div>}</div></div></main>}

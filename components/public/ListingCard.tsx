@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import { formatCc, formatKm, formatPrice } from '@/lib/formatting';
+import type { Listing } from '@/lib/db/listings';
+export default function ListingCard({listing,cover}:{listing:Listing;cover?:string}){return <Link className="card" href={`/aggelies/${listing.slug}`}><div className="card-media">{cover?<img loading="lazy" src={`/media/${encodeURIComponent(cover)}`} alt={`${listing.title} - κύρια φωτογραφία`}/>:<span className="muted">Χωρίς φωτογραφία</span>}</div><div className="card-body"><h2>{listing.title}</h2><span className="price">{formatPrice(listing.price_eur)}</span><div className="spec-row"><span className="spec">{listing.registration_year}</span><span className="spec">{formatKm(listing.kilometers)}</span><span className="spec">{formatCc(listing.engine_cc)}</span></div>{listing.description&&<p className="muted">{listing.description.slice(0,110)}{listing.description.length>110?'…':''}</p>}</div></Link>}
