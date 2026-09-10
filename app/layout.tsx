@@ -13,6 +13,16 @@ export const metadata: Metadata = {
   },
   description:
     'Μεταχειρισμένες μοτοσυκλέτες, πωλήσεις, εισαγωγές, αξεσουάρ και ανταλλακτικά στη Νέα Έφεσο Πιερίας.',
+  icons: {
+    icon: [
+      {
+        url: '/motoprionas-logo.png',
+        type: 'image/png',
+      },
+    ],
+    shortcut: '/motoprionas-logo.png',
+    apple: '/motoprionas-logo.png',
+  },
 };
 
 export default function RootLayout({
